@@ -1,0 +1,13 @@
+{
+    "briam.perez": {
+        "password": "briam12345"
+    },
+    "briam.perezt": {
+        "password": "briam123456",
+        "rol": "tendero"
+    },
+    "briam": {
+        "password": "12345",
+        "rol": "cliente"
+    }
+}

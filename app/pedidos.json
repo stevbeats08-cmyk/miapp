@@ -1,0 +1,9 @@
+[
+    {
+        "usuario": "briam",
+        "tienda": "Tienda BR",
+        "producto": "arroz",
+        "cantidad": 1,
+        "direccion": "mi casa"
+    }
+]

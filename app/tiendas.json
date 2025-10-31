@@ -1,0 +1,12 @@
+[
+    {
+        "nombre": "Tienda BR",
+        "dueno": "briam.perezt",
+        "productos": [
+            "Arroz",
+            "carne",
+            "pollo",
+            "verduras"
+        ]
+    }
+]
