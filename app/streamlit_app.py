@@ -64,9 +64,8 @@ if "rol" not in st.session_state:
 
 # ---------------- LOGIN / REGISTRO ----------------
 if not st.session_state.logged_in:
-    
-
-    st.markdown("<h1 class='main-title'>MyBarrioYa 🏘️</h1>", unsafe_allow_html=True)
+    st.image("logo1.png", width=180)
+    st.markdown("<h1 class='main-title'>MyBarrioYa 🛒</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-title'>Tu tienda del barrio, en la palma de tu mano.</p>", unsafe_allow_html=True)
 
     tab1, tab2 = st.tabs(["🔐 Iniciar sesión", "🆕 Registrarse"])
@@ -106,13 +105,13 @@ if st.sidebar.button("🚪 Cerrar sesión"):
 
 # ---------------- MENÚS SEGÚN ROL ----------------
 if st.session_state.rol == "cliente":
-    page = st.sidebar.radio("Navegación", ["🏠 Inicio", "🛍️ Hacer Pedido", "📦 Mis Pedidos"])
+    page = st.sidebar.radio("Navegación", ["🏠 Inicio", "🛒 Hacer Pedido", "📦 Mis Pedidos"])
     
     if page == "🏠 Inicio":
         st.markdown("<h1 class='main-title'>Bienvenido a MyBarrioYa 🏘️</h1>", unsafe_allow_html=True)
         st.markdown("<p class='sub-title'>Encuentra y pide en tus tiendas favoritas.</p>", unsafe_allow_html=True)
     
-    elif page == "🛍️ Hacer Pedido":
+    elif page == "🛒 Hacer Pedido":
         tiendas = load_json(TIENDAS_FILE, [])
         if tiendas:
             tienda = st.selectbox("Selecciona una tienda:", [t["nombre"] for t in tiendas])
