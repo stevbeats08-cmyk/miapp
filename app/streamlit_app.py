@@ -2,7 +2,7 @@ import streamlit as st
 import json
 import os
 
-st.image("logo1.png", width=180)
+
 
 # ---------------- CONFIGURACIÓN DE LA PÁGINA ----------------
 st.set_page_config(
