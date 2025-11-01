@@ -163,7 +163,7 @@ if "rol" not in st.session_state:
 
 # ---------------- LOGIN ----------------
 if not st.session_state.logged_in:
-    st.image("logo1.png", width=180)
+    st.image("logo.png", width=180)
     st.markdown("<h1 class='main-title'>🛒 MyBarrioYa</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-title'>Tu app para pedidos en tu barrio</p>", unsafe_allow_html=True)
 
@@ -198,7 +198,7 @@ else:
     badge = f"<span class='badge'>{unread}</span>" if unread > 0 else ""
 
     # LOGO EN EL SIDEBAR
-    st.sidebar.image("logo1.png", width=120)
+    st.sidebar.image("logo.png", width=120)
     st.sidebar.markdown(f"👤 **{username}** ({rol}) {badge}", unsafe_allow_html=True)
     st.sidebar.divider()
 
@@ -218,7 +218,7 @@ else:
 
     # ---------------- PANEL ADMIN ----------------
     if rol == "admin":
-        st.image("logo1.png", width=160)
+        st.image("logo.png", width=160)
         if menu == "Inicio":
             st.title("Panel de administrador")
             st.write("👋 Bienvenido, Briam. Aquí puedes supervisar toda la actividad.")
@@ -235,7 +235,7 @@ else:
 
     # ---------------- PANEL TENDERO ----------------
     elif rol == "tendero":
-        st.image("logo1.png", width=160)
+        st.image("logo.png", width=160)
         if menu == "Inicio":
             st.title(f"Bienvenido My Barrio YApp {username} 👋")
             st.write("Aquí puedes gestionar los pedidos de tus clientes.")
@@ -259,7 +259,7 @@ else:
 
     # ---------------- PANEL CLIENTE ----------------
     else:
-        st.image("logo1.png", width=160)
+        st.image("logo.png", width=160)
         if menu == "Inicio":
             st.title(f"Bienvenido a My Barrio YApp {username} 👋")
             st.write("Haz tus pedidos fácilmente desde aquí.")
