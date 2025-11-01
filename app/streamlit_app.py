@@ -2,6 +2,8 @@ import streamlit as st
 import json
 import os
 
+st.image("logo1.png", width=180)
+
 # ---------------- CONFIGURACIÓN DE LA PÁGINA ----------------
 st.set_page_config(
     page_title="MyBarrioYa",
@@ -9,7 +11,7 @@ st.set_page_config(
     layout="wide",
 )
 
-st.image("logo1.png", width=180)
+
 
 # ---------------- ESTILOS ----------------
 st.markdown("""
