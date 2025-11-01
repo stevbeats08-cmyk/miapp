@@ -151,7 +151,7 @@ if st.sidebar.button("🚪 Cerrar sesión"):
 
 # ---------------- MENÚS SEGÚN ROL ----------------
 if st.session_state.rol == "cliente":
-    page = st.sidebar.radio("Navegación", ["🏠 Inicio", "🛒 Hacer Pedido", "📦 Mis Pedidos"])
+    page = st.sidebar.radio("Navegación", ["🏠 Inicio", "🛍️ Hacer Pedido", "📦 Mis Pedidos"])
     
     if page == "🏠 Inicio":
         st.markdown("<h1 class='main-title'>Bienvenido a MyBarrioYa 🏘️</h1>", unsafe_allow_html=True)
