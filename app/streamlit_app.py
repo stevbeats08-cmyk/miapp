@@ -1,16 +1,17 @@
+# streamlit_app.py
 import streamlit as st
 import json
 import os
 from datetime import datetime
 
-# ---------------- CONFIG ----------------
-st.set_page_config(page_title="MyBarrioYa 🛒", layout="wide")
+# ---------------- CONFIGURACIÓN DE PÁGINA ----------------
+st.set_page_config(page_title="MyBarrioYa", page_icon="🛒", layout="wide")
 
-# ---------------- ESTILO ----------------
+# ---------------- ESTILOS ----------------
 st.markdown("""
     <style>
         body { background-color: #121212; color: #ddd; }
-        .main-title { text-align: center; font-size: 40px; color: #4CAF50; font-weight: bold; margin-bottom: 4px; }
+        .main-title { text-align: center; font-size: 38px; color: #4CAF50; font-weight: bold; margin-bottom: 4px; }
         .sub-title { text-align: center; font-size: 16px; color: #a1a1a1; margin-bottom: 18px; }
         .stButton>button { background-color: #4CAF50; color: white; border-radius: 8px; height: 2.6em; font-size:16px; }
         .stButton>button:hover { background-color: #66bb6a; }
@@ -26,7 +27,7 @@ TIENDAS_FILE = "tiendas.json"
 PEDIDOS_FILE = "pedidos.json"
 NOTIFS_FILE = "notificaciones.json"
 
-# ---------------- FUNCIONES JSON ----------------
+# ---------------- FUNCIONES AUXILIARES ----------------
 def load_json(filename, default):
     if os.path.exists(filename):
         try:
@@ -40,7 +41,7 @@ def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-# ---------------- ASEGURAR ARCHIVOS ----------------
+# ---------------- ARCHIVOS BASE ----------------
 for fname, default in [
     (USER_FILE, {}),
     (TIENDAS_FILE, []),
@@ -50,7 +51,7 @@ for fname, default in [
     if not os.path.exists(fname):
         save_json(fname, default)
 
-# ---------------- ADMIN ----------------
+# ---------------- ADMIN UNICO ----------------
 def ensure_admin():
     users = load_json(USER_FILE, {})
     if "briamCeo" not in users:
@@ -111,6 +112,8 @@ def register_user(username, password, rol):
     users = load_json(USER_FILE, {})
     if not username or not password or username in users:
         return False
+    if rol == "admin":
+        return False  # no permitir nuevos admin
     users[username] = {"password": password, "rol": rol}
     save_json(USER_FILE, users)
     add_notification("admin", "nuevo_usuario", f"Nuevo usuario registrado: {username} ({rol})")
@@ -136,12 +139,21 @@ def create_order(usuario, tienda, producto, cantidad, direccion):
     }
     pedidos.append(pedido)
     save_json(PEDIDOS_FILE, pedidos)
+    add_notification("admin", "nuevo_pedido", f"Pedido de {usuario}: {producto} x{cantidad}")
+    add_notification(tienda, "nuevo_pedido", f"Tienes un nuevo pedido de {usuario}: {producto} x{cantidad}")
+    return pedido
 
-    add_notification("admin", "nuevo_pedido", f"Pedido de {usuario} a {tienda}")
-    add_notification(tienda, "nuevo_pedido", f"Nuevo pedido de {usuario}: {producto} x{cantidad}")
-    return True
+def update_order_status(pedido_index, new_status):
+    pedidos = load_json(PEDIDOS_FILE, [])
+    if 0 <= pedido_index < len(pedidos):
+        pedido = pedidos[pedido_index]
+        pedido["estado"] = new_status
+        save_json(PEDIDOS_FILE, pedidos)
+        add_notification(pedido["usuario"], "pedido_enviado", f"Tu pedido de {pedido['producto']} ha sido enviado ✅")
+        return pedido
+    return None
 
-# ---------------- SESSION ----------------
+# ---------------- SESIÓN ----------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -149,73 +161,121 @@ if "username" not in st.session_state:
 if "rol" not in st.session_state:
     st.session_state.rol = ""
 
-# ---------------- UI ----------------
-st.markdown("<h1 class='main-title'>MyBarrioYa 🛒</h1>", unsafe_allow_html=True)
-st.markdown("<p class='sub-title'>Tu tienda del barrio ahora en tu celular</p>", unsafe_allow_html=True)
-
+# ---------------- LOGIN ----------------
 if not st.session_state.logged_in:
-    opcion = st.radio("Selecciona una opción:", ["Iniciar sesión", "Registrarse"])
+    st.markdown("<h1 class='main-title'>🛒 MyBarrioYa</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='sub-title'>Tu app para pedidos en tu barrio</p>", unsafe_allow_html=True)
 
-    if opcion == "Iniciar sesión":
-        username = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
-            rol = login_user(username, password)
-            if rol:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.rol = rol
-                st.success(f"Bienvenido {username} 👋")
-                st.rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos")
+    st.subheader("Iniciar sesión")
+    username = st.text_input("Usuario")
+    password = st.text_input("Contraseña", type="password")
+    if st.button("Entrar"):
+        rol = login_user(username, password)
+        if rol:
+            st.session_state.logged_in = True
+            st.session_state.username = username
+            st.session_state.rol = rol
+            st.rerun()
+        else:
+            st.error("Usuario o contraseña incorrectos")
 
-    elif opcion == "Registrarse":
-        username = st.text_input("Nuevo usuario")
-        password = st.text_input("Contraseña", type="password")
-        rol = st.selectbox("Rol", ["cliente", "tendero"])
-        if st.button("Crear cuenta"):
-            if register_user(username, password, rol):
-                st.success("✅ Usuario creado con éxito. Ya puedes iniciar sesión.")
-            else:
-                st.error("❌ Error: usuario ya existe o datos inválidos.")
+    st.divider()
+    st.subheader("Registrarse")
+    new_user = st.text_input("Nuevo usuario")
+    new_pass = st.text_input("Nueva contraseña", type="password")
+    new_rol = st.selectbox("Rol", ["cliente", "tendero"])
+    if st.button("Crear cuenta"):
+        if register_user(new_user, new_pass, new_rol):
+            st.success("Usuario registrado correctamente ✅")
+        else:
+            st.warning("El usuario ya existe o no es válido")
 
 else:
-    notif_count = get_unread_count_for("admin" if st.session_state.rol == "admin" else st.session_state.username)
-    badge = f"<span class='badge'>{notif_count}</span>" if notif_count > 0 else ""
-    st.sidebar.markdown(f"### 👤 {st.session_state.username} ({st.session_state.rol}) {badge}", unsafe_allow_html=True)
+    rol = st.session_state.rol
+    username = st.session_state.username
+    unread = get_unread_count_for("admin" if rol == "admin" else username)
+    badge = f"<span class='badge'>{unread}</span>" if unread > 0 else ""
 
-    if st.sidebar.button("🔔 Ver notificaciones"):
-        mark_all_read_for("admin" if st.session_state.rol == "admin" else st.session_state.username)
-        for n in list_notifications_for("admin" if st.session_state.rol == "admin" else st.session_state.username):
-            st.markdown(f"<div class='notif'>🔔 {n['mensaje']}<br><span class='small'>{n['fecha']}</span></div>", unsafe_allow_html=True)
+    st.sidebar.markdown(f"👤 **{username}** ({rol}) {badge}", unsafe_allow_html=True)
+    st.sidebar.divider()
 
-    if st.sidebar.button("🚪 Cerrar sesión"):
+    if rol == "admin":
+        menu = st.sidebar.radio("Menú", ["Inicio", "Usuarios", "Notificaciones"])
+    elif rol == "tendero":
+        menu = st.sidebar.radio("Menú", ["Inicio", "Ver pedidos", "Notificaciones"])
+    else:
+        menu = st.sidebar.radio("Menú", ["Inicio", "Hacer pedido", "Notificaciones"])
+
+    st.sidebar.divider()
+    if st.sidebar.button("Cerrar sesión"):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.session_state.rol = ""
         st.rerun()
 
-    # -------- PANELES --------
-    if st.session_state.rol == "admin":
-        st.subheader("📊 Panel de administrador")
-        users = load_json(USER_FILE, {})
-        st.write("**Usuarios registrados:**")
-        st.table([{"Usuario": u, "Rol": data["rol"]} for u, data in users.items()])
+    # ---------------- PANEL ADMIN ----------------
+    if rol == "admin":
+        if menu == "Inicio":
+            st.title("Panel de administrador")
+            st.write("👋 Bienvenido, Briam. Aquí puedes supervisar toda la actividad.")
+        elif menu == "Usuarios":
+            st.subheader("Usuarios registrados")
+            users = load_json(USER_FILE, {})
+            st.table([{"Usuario": u, "Rol": info["rol"]} for u, info in users.items()])
+        elif menu == "Notificaciones":
+            st.subheader("Notificaciones 🔔")
+            notifs = list_notifications_for("admin")
+            for n in notifs:
+                st.markdown(f"<div class='notif'><b>{n['mensaje']}</b><div class='small'>{n['fecha']}</div></div>", unsafe_allow_html=True)
+            mark_all_read_for("admin")
 
-    elif st.session_state.rol == "tendero":
-        st.subheader("🛍 Panel del Tendero")
-        st.info("Aquí aparecerán los pedidos de tus clientes próximamente.")
+    # ---------------- PANEL TENDERO ----------------
+    elif rol == "tendero":
+        if menu == "Inicio":
+            st.title(f"Bienvenido {username} 👋")
+            st.write("Aquí puedes gestionar los pedidos de tus clientes.")
+        elif menu == "Ver pedidos":
+            st.subheader("Pedidos recibidos")
+            pedidos = load_json(PEDIDOS_FILE, [])
+            for i, p in enumerate(pedidos):
+                if p["tienda"] == username:
+                    st.markdown(f"**{p['usuario']}** pidió **{p['producto']} x{p['cantidad']}**")
+                    if p["estado"] == "pendiente":
+                        if st.button(f"Marcar como enviado #{i}"):
+                            update_order_status(i, "enviado")
+                            st.success("Pedido marcado como enviado ✅")
+                            st.rerun()
+        elif menu == "Notificaciones":
+            st.subheader("Notificaciones 🔔")
+            notifs = list_notifications_for(username)
+            for n in notifs:
+                st.markdown(f"<div class='notif'><b>{n['mensaje']}</b><div class='small'>{n['fecha']}</div></div>", unsafe_allow_html=True)
+            mark_all_read_for(username)
 
-    elif st.session_state.rol == "cliente":
-        st.subheader("🛒 Realizar pedido")
-        tienda = st.text_input("Nombre de la tienda")
-        producto = st.text_input("Producto")
-        cantidad = st.number_input("Cantidad", 1, 100, 1)
-        direccion = st.text_input("Dirección de entrega")
-        if st.button("Enviar pedido"):
-            if create_order(st.session_state.username, tienda, producto, cantidad, direccion):
-                st.success("✅ Pedido enviado con éxito.")
+    # ---------------- PANEL CLIENTE ----------------
+    else:
+        if menu == "Inicio":
+            st.title(f"Bienvenido {username} 👋")
+            st.write("Haz tus pedidos fácilmente desde aquí.")
+        elif menu == "Hacer pedido":
+            st.subheader("Nuevo pedido 🛍️")
+            tiendas = load_json(TIENDAS_FILE, [])
+            if tiendas:
+                tienda = st.selectbox("Selecciona tienda", [t.get("nombre") for t in tiendas])
+            else:
+                tienda = st.text_input("Nombre de la tienda (temporal)")
+            producto = st.text_input("Producto")
+            cantidad = st.number_input("Cantidad", 1, 50, 1)
+            direccion = st.text_area("Dirección de entrega")
+            if st.button("Enviar pedido"):
+                create_order(username, tienda, producto, cantidad, direccion)
+                st.success("Pedido enviado correctamente ✅")
+        elif menu == "Notificaciones":
+            st.subheader("Notificaciones 🔔")
+            notifs = list_notifications_for(username)
+            for n in notifs:
+                st.markdown(f"<div class='notif'><b>{n['mensaje']}</b><div class='small'>{n['fecha']}</div></div>", unsafe_allow_html=True)
+            mark_all_read_for(username)
 
 
 
