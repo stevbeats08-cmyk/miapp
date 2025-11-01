@@ -64,7 +64,7 @@ if "rol" not in st.session_state:
 
 # ---------------- LOGIN / REGISTRO ----------------
 if not st.session_state.logged_in:
-    st.image("logo1.png", width=180)
+    
     st.markdown("<h1 class='main-title'>MyBarrioYa 🛒</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-title'>Tu tienda del barrio, en la palma de tu mano.</p>", unsafe_allow_html=True)
 
