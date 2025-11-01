@@ -17,7 +17,7 @@ def safe_rerun():
 
 # ---------------- Paths seguros (relativos al archivo) ----------------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # carpeta 'app'
-STATIC_DIR = os.path.join(BASE_DIR, "static")
+STATIC_DIR = os.path.join(BASE_DIR, "app", "static")
 LOGO_FILENAME = "logo1.png"
 LOGO_PATH = os.path.join(STATIC_DIR, LOGO_FILENAME)
 
