@@ -27,6 +27,48 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- Ajustes extra para versión móvil y diseño tipo Rappi ---
+st.markdown("""
+    <style>
+        /* --- Ajustes para móviles --- */
+        @media (max-width: 600px) {
+            .main-title {
+                font-size: 28px !important;
+            }
+            .sub-title {
+                font-size: 16px !important;
+            }
+            .stButton>button {
+                font-size: 16px !important;
+                height: 2.8em !important;
+            }
+        }
+
+        /* --- Cards tipo Rappi --- */
+        .product-card {
+            background-color: #1e1e1e;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            transition: transform 0.2s ease;
+        }
+        .product-card:hover {
+            transform: scale(1.02);
+        }
+        .product-title {
+            font-size: 18px;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        .product-price {
+            color: #ccc;
+            font-size: 14px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
 # ---------------- FUNCIONES DE ARCHIVOS ----------------
 def load_json(filename, default):
     if os.path.exists(filename):
