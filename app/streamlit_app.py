@@ -51,7 +51,7 @@ for fname, default in [
     if not os.path.exists(fname):
         save_json(fname, default)
 
-# ---------------- Admin único ----------------
+# ---------------- Ensure single admin ----------------
 def ensure_admin():
     users = load_json(USER_FILE, {})
     if "briamCeo" not in users:
@@ -59,14 +59,7 @@ def ensure_admin():
         save_json(USER_FILE, users)
 ensure_admin()
 
-# ---------------- Helper para recargar sin error ----------------
-def safe_rerun():
-    try:
-        st.rerun()
-    except AttributeError:
-        st.experimental_rerun()
-
-# ---------------- Notificaciones ----------------
+# ---------------- Notification helpers ----------------
 def add_notification(para, tipo, mensaje, meta=None):
     notifs = load_json(NOTIFS_FILE, [])
     entry = {
@@ -82,38 +75,46 @@ def add_notification(para, tipo, mensaje, meta=None):
 
 def get_unread_count_for(user):
     notifs = load_json(NOTIFS_FILE, [])
-    return sum(
-        1 for n in notifs
-        if not n.get("leido", False) and
-        ((user == "admin" and n.get("para") == "admin") or (n.get("para") == user))
-    )
+    count = 0
+    for n in notifs:
+        if not n.get("leido", False):
+            if user == "admin" and n.get("para") == "admin":
+                count += 1
+            elif n.get("para") == user:
+                count += 1
+    return count
 
 def list_notifications_for(user):
     notifs = load_json(NOTIFS_FILE, [])
-    filtered = [
-        n for n in notifs
-        if (user == "admin" and n.get("para") == "admin") or (n.get("para") == user)
-    ]
-    return sorted(filtered, key=lambda x: x.get("fecha", ""), reverse=True)
+    filtered = []
+    for n in notifs:
+        if user == "admin" and n.get("para") == "admin":
+            filtered.append(n)
+        elif n.get("para") == user:
+            filtered.append(n)
+    return sorted(filtered, key=lambda x: x.get("fecha",""), reverse=True)
 
 def mark_all_read_for(user):
     notifs = load_json(NOTIFS_FILE, [])
     changed = False
     for n in notifs:
-        if ((user == "admin" and n.get("para") == "admin") or (n.get("para") == user)) and not n.get("leido", False):
+        if user == "admin" and n.get("para") == "admin" and not n.get("leido", False):
+            n["leido"] = True
+            changed = True
+        elif n.get("para") == user and not n.get("leido", False):
             n["leido"] = True
             changed = True
     if changed:
         save_json(NOTIFS_FILE, notifs)
 
-# ---------------- Usuarios ----------------
+# ---------------- User functions ----------------
 def register_user(username, password, rol):
     users = load_json(USER_FILE, {})
     if not username or not password or username in users:
         return False
     users[username] = {"password": password, "rol": rol}
     save_json(USER_FILE, users)
-    add_notification("admin", "nuevo_usuario", f"Nuevo usuario registrado: {username} ({rol})")
+    add_notification("admin", "nuevo_usuario", f"Nuevo usuario: {username} ({rol})", {"usuario": username, "rol": rol})
     return True
 
 def login_user(username, password):
@@ -122,7 +123,7 @@ def login_user(username, password):
         return users[username].get("rol")
     return None
 
-# ---------------- Pedidos ----------------
+# ---------------- Pedido functions ----------------
 def create_order(usuario, tienda, producto, cantidad, direccion):
     pedidos = load_json(PEDIDOS_FILE, [])
     pedido = {
@@ -136,13 +137,13 @@ def create_order(usuario, tienda, producto, cantidad, direccion):
     }
     pedidos.append(pedido)
     save_json(PEDIDOS_FILE, pedidos)
-    add_notification("admin", "nuevo_pedido", f"Pedido de {usuario} a {tienda}: {producto} x{cantidad}")
+    add_notification("admin", "nuevo_pedido", f"Pedido de {usuario} a {tienda}: {producto} x{cantidad}", {"usuario": usuario, "tienda": tienda})
     tiendas = load_json(TIENDAS_FILE, [])
     tienda_obj = next((t for t in tiendas if t.get("nombre") == tienda), None)
     if tienda_obj:
         dueno = tienda_obj.get("dueno")
         if dueno:
-            add_notification(dueno, "nuevo_pedido", f"NUEVO pedido: {producto} x{cantidad} de {usuario}")
+            add_notification(dueno, "nuevo_pedido", f"NUEVO pedido: {producto} x{cantidad} de {usuario}", {"usuario": usuario, "tienda": tienda})
     return pedido
 
 def update_order_status(pedido_index, new_status):
@@ -153,7 +154,7 @@ def update_order_status(pedido_index, new_status):
         return pedidos[pedido_index]
     return None
 
-# ---------------- Estado de sesión ----------------
+# ---------------- Session defaults ----------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -161,50 +162,28 @@ if "username" not in st.session_state:
 if "rol" not in st.session_state:
     st.session_state.rol = ""
 
-# ---------------- LOGIN / REGISTRO ----------------
-if not st.session_state.logged_in:
-    st.markdown("<h1 class='main-title'>MyBarrioYa 🛒</h1>", unsafe_allow_html=True)
-    st.markdown("<p class='sub-title'>Tu tienda del barrio, en la palma de tu mano.</p>", unsafe_allow_html=True)
-
-    tab1, tab2 = st.tabs(["🔐 Iniciar sesión", "🆕 Registrarse"])
-
-    with tab1:
-        username = st.text_input("Usuario")
-        password = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
-            rol = login_user(username, password)
-            if rol:
-                st.session_state.logged_in = True
-                st.session_state.username = username
-                st.session_state.rol = rol
-                st.success(f"Bienvenido {username} ({rol}) 🎉")
-                safe_rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos.")
-
-    with tab2:
-        new_user = st.text_input("Nuevo usuario")
-        new_pass = st.text_input("Nueva contraseña", type="password")
-        rol = st.selectbox("Selecciona tu rol", ["cliente", "tendero"])
-        if st.button("Registrar"):
-            if register_user(new_user, new_pass, rol):
-                st.success("✅ Usuario registrado correctamente. Ahora inicia sesión.")
-                safe_rerun()
-            else:
-                st.warning("⚠️ El usuario ya existe o faltan datos.")
-    st.stop()
-
 # ---------------- Sidebar ----------------
-unread = get_unread_count_for(st.session_state.username if st.session_state.rol != "admin" else "admin")
-badge = f" <span class='badge'>{unread}</span>" if unread > 0 else ""
-st.sidebar.header(f"👤 {st.session_state.username} ({st.session_state.rol}) {badge}", unsafe_allow_html=True)
+if st.session_state.logged_in:
+    notif_count = get_unread_count_for(
+        "admin" if st.session_state.rol == "admin" else st.session_state.username
+    )
+    badge = f"<span class='badge'>{notif_count}</span>" if notif_count > 0 else ""
 
-if st.sidebar.button("🚪 Cerrar sesión"):
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.session_state.rol = ""
-    safe_rerun()
+    st.sidebar.markdown(
+        f"### 👤 {st.session_state.username} ({st.session_state.rol}) {badge}",
+        unsafe_allow_html=True
+    )
 
+    if st.sidebar.button("🔔 Ver notificaciones"):
+        mark_all_read_for("admin" if st.session_state.rol == "admin" else st.session_state.username)
+        st.session_state.show_notifs = True
+
+    if st.sidebar.button("🚪 Cerrar sesión"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.rol = ""
+
+# Aquí seguiría tu lógica principal (login, registro, menús, etc.)
 
 
 
