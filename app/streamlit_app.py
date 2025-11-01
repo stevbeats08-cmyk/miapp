@@ -161,9 +161,13 @@ if "username" not in st.session_state:
 if "rol" not in st.session_state:
     st.session_state.rol = ""
 
+# ---------------- LOGO ----------------
+logo_path = os.path.join("static", "logo1.png")
+
 # ---------------- LOGIN ----------------
 if not st.session_state.logged_in:
-    st.image("logo.png", width=180)
+    if os.path.exists(logo_path):
+        st.image(logo_path, width=160)
     st.markdown("<h1 class='main-title'>🛒 MyBarrioYa</h1>", unsafe_allow_html=True)
     st.markdown("<p class='sub-title'>Tu app para pedidos en tu barrio</p>", unsafe_allow_html=True)
 
@@ -197,8 +201,8 @@ else:
     unread = get_unread_count_for("admin" if rol == "admin" else username)
     badge = f"<span class='badge'>{unread}</span>" if unread > 0 else ""
 
-    # LOGO EN EL SIDEBAR
-    st.sidebar.image("logo.png", width=120)
+    if os.path.exists(logo_path):
+        st.sidebar.image(logo_path, width=120)
     st.sidebar.markdown(f"👤 **{username}** ({rol}) {badge}", unsafe_allow_html=True)
     st.sidebar.divider()
 
@@ -218,7 +222,6 @@ else:
 
     # ---------------- PANEL ADMIN ----------------
     if rol == "admin":
-        st.image("logo.png", width=160)
         if menu == "Inicio":
             st.title("Panel de administrador")
             st.write("👋 Bienvenido, Briam. Aquí puedes supervisar toda la actividad.")
@@ -235,7 +238,6 @@ else:
 
     # ---------------- PANEL TENDERO ----------------
     elif rol == "tendero":
-        st.image("logo.png", width=160)
         if menu == "Inicio":
             st.title(f"Bienvenido My Barrio YApp {username} 👋")
             st.write("Aquí puedes gestionar los pedidos de tus clientes.")
@@ -259,7 +261,6 @@ else:
 
     # ---------------- PANEL CLIENTE ----------------
     else:
-        st.image("logo.png", width=160)
         if menu == "Inicio":
             st.title(f"Bienvenido a My Barrio YApp {username} 👋")
             st.write("Haz tus pedidos fácilmente desde aquí.")
