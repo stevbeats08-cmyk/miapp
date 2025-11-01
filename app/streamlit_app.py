@@ -1,13 +1,12 @@
-# streamlit_app.py
 import streamlit as st
 import json
 import os
 from datetime import datetime
 
-# ---------------- Page config ----------------
-st.set_page_config(page_title="MyBarrioYa", page_icon="🛒", layout="wide")
+# ---------------- CONFIG ----------------
+st.set_page_config(page_title="MyBarrioYa 🛒", layout="wide")
 
-# ---------------- Styles ----------------
+# ---------------- ESTILO ----------------
 st.markdown("""
     <style>
         body { background-color: #121212; color: #ddd; }
@@ -21,13 +20,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ---------------- Files ----------------
+# ---------------- ARCHIVOS ----------------
 USER_FILE = "usuarios.json"
 TIENDAS_FILE = "tiendas.json"
 PEDIDOS_FILE = "pedidos.json"
 NOTIFS_FILE = "notificaciones.json"
 
-# ---------------- Helpers: load/save JSON ----------------
+# ---------------- FUNCIONES JSON ----------------
 def load_json(filename, default):
     if os.path.exists(filename):
         try:
@@ -41,7 +40,7 @@ def save_json(filename, data):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)
 
-# ---------------- Ensure files exist ----------------
+# ---------------- ASEGURAR ARCHIVOS ----------------
 for fname, default in [
     (USER_FILE, {}),
     (TIENDAS_FILE, []),
@@ -51,7 +50,7 @@ for fname, default in [
     if not os.path.exists(fname):
         save_json(fname, default)
 
-# ---------------- Ensure single admin ----------------
+# ---------------- ADMIN ----------------
 def ensure_admin():
     users = load_json(USER_FILE, {})
     if "briamCeo" not in users:
@@ -59,7 +58,7 @@ def ensure_admin():
         save_json(USER_FILE, users)
 ensure_admin()
 
-# ---------------- Notification helpers ----------------
+# ---------------- NOTIFICACIONES ----------------
 def add_notification(para, tipo, mensaje, meta=None):
     notifs = load_json(NOTIFS_FILE, [])
     entry = {
@@ -107,14 +106,14 @@ def mark_all_read_for(user):
     if changed:
         save_json(NOTIFS_FILE, notifs)
 
-# ---------------- User functions ----------------
+# ---------------- USUARIOS ----------------
 def register_user(username, password, rol):
     users = load_json(USER_FILE, {})
     if not username or not password or username in users:
         return False
     users[username] = {"password": password, "rol": rol}
     save_json(USER_FILE, users)
-    add_notification("admin", "nuevo_usuario", f"Nuevo usuario: {username} ({rol})", {"usuario": username, "rol": rol})
+    add_notification("admin", "nuevo_usuario", f"Nuevo usuario registrado: {username} ({rol})")
     return True
 
 def login_user(username, password):
@@ -123,7 +122,7 @@ def login_user(username, password):
         return users[username].get("rol")
     return None
 
-# ---------------- Pedido functions ----------------
+# ---------------- PEDIDOS ----------------
 def create_order(usuario, tienda, producto, cantidad, direccion):
     pedidos = load_json(PEDIDOS_FILE, [])
     pedido = {
@@ -137,24 +136,12 @@ def create_order(usuario, tienda, producto, cantidad, direccion):
     }
     pedidos.append(pedido)
     save_json(PEDIDOS_FILE, pedidos)
-    add_notification("admin", "nuevo_pedido", f"Pedido de {usuario} a {tienda}: {producto} x{cantidad}", {"usuario": usuario, "tienda": tienda})
-    tiendas = load_json(TIENDAS_FILE, [])
-    tienda_obj = next((t for t in tiendas if t.get("nombre") == tienda), None)
-    if tienda_obj:
-        dueno = tienda_obj.get("dueno")
-        if dueno:
-            add_notification(dueno, "nuevo_pedido", f"NUEVO pedido: {producto} x{cantidad} de {usuario}", {"usuario": usuario, "tienda": tienda})
-    return pedido
 
-def update_order_status(pedido_index, new_status):
-    pedidos = load_json(PEDIDOS_FILE, [])
-    if 0 <= pedido_index < len(pedidos):
-        pedidos[pedido_index]["estado"] = new_status
-        save_json(PEDIDOS_FILE, pedidos)
-        return pedidos[pedido_index]
-    return None
+    add_notification("admin", "nuevo_pedido", f"Pedido de {usuario} a {tienda}")
+    add_notification(tienda, "nuevo_pedido", f"Nuevo pedido de {usuario}: {producto} x{cantidad}")
+    return True
 
-# ---------------- Session defaults ----------------
+# ---------------- SESSION ----------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -162,28 +149,74 @@ if "username" not in st.session_state:
 if "rol" not in st.session_state:
     st.session_state.rol = ""
 
-# ---------------- Sidebar ----------------
-if st.session_state.logged_in:
-    notif_count = get_unread_count_for(
-        "admin" if st.session_state.rol == "admin" else st.session_state.username
-    )
-    badge = f"<span class='badge'>{notif_count}</span>" if notif_count > 0 else ""
+# ---------------- UI ----------------
+st.markdown("<h1 class='main-title'>MyBarrioYa 🛒</h1>", unsafe_allow_html=True)
+st.markdown("<p class='sub-title'>Tu tienda del barrio ahora en tu celular</p>", unsafe_allow_html=True)
 
-    st.sidebar.markdown(
-        f"### 👤 {st.session_state.username} ({st.session_state.rol}) {badge}",
-        unsafe_allow_html=True
-    )
+if not st.session_state.logged_in:
+    opcion = st.radio("Selecciona una opción:", ["Iniciar sesión", "Registrarse"])
+
+    if opcion == "Iniciar sesión":
+        username = st.text_input("Usuario")
+        password = st.text_input("Contraseña", type="password")
+        if st.button("Entrar"):
+            rol = login_user(username, password)
+            if rol:
+                st.session_state.logged_in = True
+                st.session_state.username = username
+                st.session_state.rol = rol
+                st.success(f"Bienvenido {username} 👋")
+                st.rerun()
+            else:
+                st.error("Usuario o contraseña incorrectos")
+
+    elif opcion == "Registrarse":
+        username = st.text_input("Nuevo usuario")
+        password = st.text_input("Contraseña", type="password")
+        rol = st.selectbox("Rol", ["cliente", "tendero"])
+        if st.button("Crear cuenta"):
+            if register_user(username, password, rol):
+                st.success("✅ Usuario creado con éxito. Ya puedes iniciar sesión.")
+            else:
+                st.error("❌ Error: usuario ya existe o datos inválidos.")
+
+else:
+    notif_count = get_unread_count_for("admin" if st.session_state.rol == "admin" else st.session_state.username)
+    badge = f"<span class='badge'>{notif_count}</span>" if notif_count > 0 else ""
+    st.sidebar.markdown(f"### 👤 {st.session_state.username} ({st.session_state.rol}) {badge}", unsafe_allow_html=True)
 
     if st.sidebar.button("🔔 Ver notificaciones"):
         mark_all_read_for("admin" if st.session_state.rol == "admin" else st.session_state.username)
-        st.session_state.show_notifs = True
+        for n in list_notifications_for("admin" if st.session_state.rol == "admin" else st.session_state.username):
+            st.markdown(f"<div class='notif'>🔔 {n['mensaje']}<br><span class='small'>{n['fecha']}</span></div>", unsafe_allow_html=True)
 
     if st.sidebar.button("🚪 Cerrar sesión"):
         st.session_state.logged_in = False
         st.session_state.username = ""
         st.session_state.rol = ""
+        st.rerun()
 
-# Aquí seguiría tu lógica principal (login, registro, menús, etc.)
+    # -------- PANELES --------
+    if st.session_state.rol == "admin":
+        st.subheader("📊 Panel de administrador")
+        users = load_json(USER_FILE, {})
+        st.write("**Usuarios registrados:**")
+        st.table([{"Usuario": u, "Rol": data["rol"]} for u, data in users.items()])
+
+    elif st.session_state.rol == "tendero":
+        st.subheader("🛍 Panel del Tendero")
+        st.info("Aquí aparecerán los pedidos de tus clientes próximamente.")
+
+    elif st.session_state.rol == "cliente":
+        st.subheader("🛒 Realizar pedido")
+        tienda = st.text_input("Nombre de la tienda")
+        producto = st.text_input("Producto")
+        cantidad = st.number_input("Cantidad", 1, 100, 1)
+        direccion = st.text_input("Dirección de entrega")
+        if st.button("Enviar pedido"):
+            if create_order(st.session_state.username, tienda, producto, cantidad, direccion):
+                st.success("✅ Pedido enviado con éxito.")
+
 
 
 
