@@ -9,6 +9,8 @@ st.set_page_config(
     layout="wide",
 )
 
+st.image("logo1.png", width=180)
+
 # ---------------- ESTILOS ----------------
 st.markdown("""
     <style>
