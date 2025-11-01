@@ -296,7 +296,7 @@ try:
 
         else:  # cliente
             if menu == "Inicio":
-                st.subheader(f"Bienvenido {username}")
+                st.subheader(f"Bienvenido a My barrio YApp {username}")
                 st.write("Resumen rápido:")
                 pedidos = load_json(PEDIDOS_FILE, [])
                 my = [p for p in pedidos if p.get("usuario")==username]
