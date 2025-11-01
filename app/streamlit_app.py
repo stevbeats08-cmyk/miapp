@@ -157,7 +157,7 @@ if st.session_state.rol == "cliente":
         st.markdown("<h1 class='main-title'>Bienvenido a MyBarrioYa 🏘️</h1>", unsafe_allow_html=True)
         st.markdown("<p class='sub-title'>Encuentra y pide en tus tiendas favoritas.</p>", unsafe_allow_html=True)
     
-    elif page == "🛒 Hacer Pedido":
+    elif page == "🛍️ Hacer Pedido":
         tiendas = load_json(TIENDAS_FILE, [])
         if tiendas:
             tienda = st.selectbox("Selecciona una tienda:", [t["nombre"] for t in tiendas])
