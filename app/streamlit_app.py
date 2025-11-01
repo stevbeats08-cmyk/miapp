@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import time
 
 # ---------------- CONFIGURACIÓN DE LA PÁGINA ----------------
 st.set_page_config(
@@ -20,33 +21,21 @@ st.markdown("""
             height: 3em; width: 100%; font-size: 18px;
         }
         .stButton>button:hover { background-color: #66bb6a; }
-
-        /* --- Ajustes para móviles --- */
-        @media (max-width: 600px) {
-            .main-title { font-size: 28px !important; }
-            .sub-title { font-size: 16px !important; }
-            .stButton>button { font-size: 16px !important; height: 2.8em !important; }
+        .notification {
+            background-color: #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+            animation: fadein 0.5s;
         }
-
-        /* --- Cards tipo Rappi --- */
-        .product-card {
-            background-color: #1e1e1e;
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s ease;
+        @keyframes fadein {
+            from {opacity: 0;}
+            to {opacity: 1;}
         }
-        .product-card:hover { transform: scale(1.02); }
-        .product-title { font-size: 18px; color: #4CAF50; font-weight: bold; }
-        .product-price { color: #ccc; font-size: 14px; }
     </style>
 """, unsafe_allow_html=True)
-
-# ---------------- ARCHIVOS USADOS ----------------
-USER_FILE = "usuarios.json"
-TIENDAS_FILE = "tiendas.json"
-PEDIDOS_FILE = "pedidos.json"
 
 # ---------------- FUNCIONES DE ARCHIVOS ----------------
 def load_json(filename, default):
@@ -59,15 +48,17 @@ def load_json(filename, default):
     return default
 
 def save_json(filename, data):
-    # asegúrate de crear carpeta si es necesario (aquí asumimos la misma carpeta)
     with open(filename, "w") as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+        json.dump(data, f, indent=4)
 
-# ---------------- FUNCIONES DE USUARIOS ----------------
+# ---------------- ARCHIVOS ----------------
+USER_FILE = "usuarios.json"
+TIENDAS_FILE = "tiendas.json"
+PEDIDOS_FILE = "pedidos.json"
+
+# ---------------- USUARIOS ----------------
 def register_user(username, password, rol):
     users = load_json(USER_FILE, {})
-    if not username:
-        return False
     if username in users:
         return False
     users[username] = {"password": password, "rol": rol}
@@ -76,24 +67,14 @@ def register_user(username, password, rol):
 
 def login_user(username, password):
     users = load_json(USER_FILE, {})
-    if username in users and users[username].get("password") == password:
-        return users[username].get("rol")
+    if username in users and users[username]["password"] == password:
+        return users[username]["rol"]
     return None
 
 # ---------------- SESIÓN ----------------
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "username" not in st.session_state:
-    st.session_state.username = ""
-if "rol" not in st.session_state:
-    st.session_state.rol = ""
-
-# --- Logo y título ---
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    # si no tienes logo1.png, quita o comenta la línea siguiente
-    if os.path.exists("logo1.png"):
-        st.image("logo1.png", width=160)
+for key in ["logged_in", "username", "rol"]:
+    if key not in st.session_state:
+        st.session_state[key] = False if key == "logged_in" else ""
 
 # ---------------- LOGIN / REGISTRO ----------------
 if not st.session_state.logged_in:
@@ -112,6 +93,7 @@ if not st.session_state.logged_in:
                 st.session_state.username = username
                 st.session_state.rol = rol
                 st.success(f"¡Bienvenido {username}! Has ingresado como {rol}.")
+                time.sleep(1)
                 st.rerun()
             else:
                 st.error("Usuario o contraseña incorrectos.")
@@ -121,141 +103,139 @@ if not st.session_state.logged_in:
         new_pass = st.text_input("Nueva contraseña", type="password")
         rol = st.selectbox("Selecciona tu rol", ["cliente", "tendero", "admin"])
         if st.button("Registrar"):
-            if not new_user or not new_pass:
-                st.error("Debes ingresar usuario y contraseña.")
+            if register_user(new_user, new_pass, rol):
+                st.success("✅ Usuario registrado correctamente. Ahora inicia sesión.")
             else:
-                if register_user(new_user, new_pass, rol):
-                    st.success("✅ Usuario registrado correctamente. Ahora inicia sesión.")
-                else:
-                    st.warning("⚠️ El usuario ya existe o los datos no son válidos.")
+                st.warning("⚠️ El usuario ya existe.")
     st.stop()
 
 # ---------------- CERRAR SESIÓN ----------------
 st.sidebar.header(f"👤 {st.session_state.username} ({st.session_state.rol})")
 if st.sidebar.button("🚪 Cerrar sesión"):
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.session_state.rol = ""
+    for key in ["logged_in", "username", "rol"]:
+        st.session_state[key] = False if key == "logged_in" else ""
     st.rerun()
 
-# ---------------- MENÚS SEGÚN ROL ----------------
+# ---------------- CLIENTE ----------------
 if st.session_state.rol == "cliente":
     page = st.sidebar.radio("Navegación", ["🏠 Inicio", "🛒 Hacer Pedido", "📦 Mis Pedidos"])
-
+    
     if page == "🏠 Inicio":
         st.markdown("<h1 class='main-title'>Bienvenido a MyBarrioYa 🏘️</h1>", unsafe_allow_html=True)
         st.markdown("<p class='sub-title'>Encuentra y pide en tus tiendas favoritas.</p>", unsafe_allow_html=True)
-
+    
     elif page == "🛒 Hacer Pedido":
         tiendas = load_json(TIENDAS_FILE, [])
         if tiendas:
-            tienda = st.selectbox("Selecciona una tienda:", [t.get("nombre", "Sin nombre") for t in tiendas])
-            tienda_obj = next((t for t in tiendas if t.get("nombre") == tienda), None)
-            productos = tienda_obj.get("productos", []) if tienda_obj else []
-            if productos:
-                producto = st.selectbox("Selecciona producto:", productos)
-            else:
-                producto = st.text_input("Producto:")
+            tienda = st.selectbox("Selecciona una tienda:", [t["nombre"] for t in tiendas])
+            producto = st.text_input("Producto:")
             cantidad = st.number_input("Cantidad:", min_value=1, step=1)
             direccion = st.text_input("Dirección de entrega:")
-            if st.button("🚀 Hacer pedido"):
+            if st.button("🚀 Enviar pedido"):
                 if producto and direccion:
                     pedidos = load_json(PEDIDOS_FILE, [])
-                    pedidos.append({
+                    pedido = {
                         "usuario": st.session_state.username,
                         "tienda": tienda,
                         "producto": producto,
                         "cantidad": cantidad,
                         "direccion": direccion,
-                        "estado": "pendiente"
-                    })
+                        "estado": "Enviado"
+                    }
+                    pedidos.append(pedido)
                     save_json(PEDIDOS_FILE, pedidos)
-                    st.success("✅ Pedido enviado correctamente.")
+                    st.success(f"✅ Pedido enviado a {tienda} correctamente.")
+                    st.balloons()
+                    time.sleep(1)
+                    st.rerun()
                 else:
                     st.error("Por favor completa todos los campos.")
         else:
             st.info("Aún no hay tiendas registradas.")
-
+    
     elif page == "📦 Mis Pedidos":
         pedidos = load_json(PEDIDOS_FILE, [])
-        user_pedidos = [p for p in pedidos if p.get("usuario") == st.session_state.username]
+        user_pedidos = [p for p in pedidos if p["usuario"] == st.session_state.username]
         if user_pedidos:
             for p in user_pedidos:
-                st.markdown(f"- **{p.get('cantidad')} x {p.get('producto')}** en **{p.get('tienda')}** → {p.get('direccion')} (Estado: {p.get('estado')})")
+                st.markdown(f"""
+                    <div class='notification'>
+                        🛍️ <b>{p['producto']}</b> x {p['cantidad']} — {p['tienda']}<br>
+                        📦 Estado: <b style='color:#4CAF50'>{p['estado']}</b><br>
+                        📍 {p['direccion']}
+                    </div>
+                """, unsafe_allow_html=True)
         else:
             st.info("No tienes pedidos todavía.")
 
+# ---------------- TENDERO ----------------
 elif st.session_state.rol == "tendero":
     page = st.sidebar.radio("Panel de tienda", ["🏪 Mi Tienda", "📦 Pedidos Recibidos"])
-
+    
     if page == "🏪 Mi Tienda":
         tiendas = load_json(TIENDAS_FILE, [])
-        tienda = next((t for t in tiendas if t.get("dueno") == st.session_state.username), None)
+        tienda = next((t for t in tiendas if t["dueno"] == st.session_state.username), None)
         if tienda:
-            st.success(f"Tienda registrada: {tienda.get('nombre')}")
-            actuales = tienda.get("productos", [])
-            nuevos_prod = st.text_area("Productos (separados por comas):", ",".join(actuales))
-            if st.button("Actualizar productos"):
+            st.success(f"Tienda registrada: {tienda['nombre']}")
+            nuevos_prod = st.text_area("Productos (separados por comas):", ",".join(tienda["productos"]))
+            if st.button("Actualizar"):
                 tienda["productos"] = [p.strip() for p in nuevos_prod.split(",") if p.strip()]
                 save_json(TIENDAS_FILE, tiendas)
                 st.success("Productos actualizados.")
         else:
-            tiendas = load_json(TIENDAS_FILE, [])
             nombre_tienda = st.text_input("Nombre de tu tienda:")
             productos = st.text_area("Productos que vendes (separados por comas):")
             if st.button("Registrar tienda"):
-                if not nombre_tienda:
-                    st.error("Debes ingresar nombre de la tienda.")
-                else:
-                    tiendas.append({
-                        "nombre": nombre_tienda,
-                        "dueno": st.session_state.username,
-                        "productos": [p.strip() for p in productos.split(",") if p.strip()]
-                    })
-                    save_json(TIENDAS_FILE, tiendas)
-                    st.success("Tienda registrada correctamente.")
+                tiendas.append({
+                    "nombre": nombre_tienda,
+                    "dueno": st.session_state.username,
+                    "productos": [p.strip() for p in productos.split(",") if p.strip()]
+                })
+                save_json(TIENDAS_FILE, tiendas)
+                st.success("Tienda registrada correctamente.")
 
     elif page == "📦 Pedidos Recibidos":
         pedidos = load_json(PEDIDOS_FILE, [])
-        mis_tiendas = [t.get("nombre") for t in load_json(TIENDAS_FILE, []) if t.get("dueno") == st.session_state.username]
-        recibidos = [p for p in pedidos if p.get("tienda") in mis_tiendas]
+        mis_tiendas = [t["nombre"] for t in load_json(TIENDAS_FILE, []) if t["dueno"] == st.session_state.username]
+        recibidos = [p for p in pedidos if p["tienda"] in mis_tiendas]
+        
         if recibidos:
+            st.info(f"📬 Tienes {len(recibidos)} pedidos nuevos.")
             for i, p in enumerate(recibidos):
-                st.markdown(f"**Pedido #{i+1}** - {p.get('cantidad')} x {p.get('producto')} para {p.get('direccion')} (Usuario: {p.get('usuario')})")
-                # botón para marcar como entregado (actualiza el archivo)
-                if st.button(f"Marcar entregado #{i+1}"):
-                    # buscamos en pedidos globales y actualizamos el primer match
-                    all_pedidos = load_json(PEDIDOS_FILE, [])
-                    for ap in all_pedidos:
-                        if ap == p:
-                            ap["estado"] = "entregado"
-                            break
-                    save_json(PEDIDOS_FILE, all_pedidos)
-                    st.success("Pedido marcado como entregado.")
-                    st.experimental_rerun()
+                st.markdown(f"""
+                    <div class='notification'>
+                        🛒 Pedido de <b>{p['usuario']}</b><br>
+                        Producto: <b>{p['producto']}</b> x {p['cantidad']}<br>
+                        📍 {p['direccion']}<br>
+                        Estado: <b style='color:#ffb300'>{p['estado']}</b>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                if st.button(f"✅ Marcar como entregado #{i+1}"):
+                    p["estado"] = "Entregado"
+                    save_json(PEDIDOS_FILE, pedidos)
+                    st.success("Pedido marcado como entregado ✅")
+                    time.sleep(1)
+                    st.rerun()
         else:
             st.info("Aún no has recibido pedidos.")
 
+# ---------------- ADMIN ----------------
 elif st.session_state.rol == "admin":
     page = st.sidebar.radio("Panel Admin", ["👥 Usuarios", "🏪 Tiendas", "📦 Pedidos"])
-
+    
     if page == "👥 Usuarios":
         st.header("👥 Lista de usuarios")
-        users = load_json(USER_FILE, {})
-        st.json(users)
-
+        st.json(load_json(USER_FILE, {}))
+    
     elif page == "🏪 Tiendas":
         st.header("🏪 Tiendas registradas")
-        tiendas = load_json(TIENDAS_FILE, [])
-        st.json(tiendas)
-
+        st.json(load_json(TIENDAS_FILE, []))
+    
     elif page == "📦 Pedidos":
         st.header("📦 Todos los pedidos")
-        pedidos = load_json(PEDIDOS_FILE, [])
-        st.json(pedidos)
+        st.json(load_json(PEDIDOS_FILE, []))
 
-else:
-    st.warning("Rol no reconocido. Inicia sesión nuevamente.")
 
 
 
