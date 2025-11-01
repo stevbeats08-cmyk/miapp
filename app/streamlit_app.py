@@ -232,7 +232,7 @@ else:
     # ---------------- PANEL TENDERO ----------------
     elif rol == "tendero":
         if menu == "Inicio":
-            st.title(f"Bienvenido {username} 👋")
+            st.title(f"Bienvenido My Barrio YApp {username} 👋")
             st.write("Aquí puedes gestionar los pedidos de tus clientes.")
         elif menu == "Ver pedidos":
             st.subheader("Pedidos recibidos")
@@ -255,7 +255,7 @@ else:
     # ---------------- PANEL CLIENTE ----------------
     else:
         if menu == "Inicio":
-            st.title(f"Bienvenido {username} 👋")
+            st.title(f"Bienvenido a My Barrio YApp {username} 👋")
             st.write("Haz tus pedidos fácilmente desde aquí.")
         elif menu == "Hacer pedido":
             st.subheader("Nuevo pedido 🛍️")
